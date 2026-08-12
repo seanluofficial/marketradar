@@ -7,7 +7,7 @@ from scipy.cluster.hierarchy import leaves_list
 
 from radar.structure import hierarchy as cl
 from radar.structure.distance import correlation_to_distance
-from tests.test_correlation import factor_returns
+from tests.helpers import factor_returns
 
 
 def blocky_distance(n_blocks: int = 3, per_block: int = 5) -> pd.DataFrame:

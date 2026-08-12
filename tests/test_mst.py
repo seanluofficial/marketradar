@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import networkx as nx
 import numpy as np
@@ -8,7 +8,7 @@ import pytest
 from radar.structure import correlation as corr_mod
 from radar.structure import distance as dist_mod
 from radar.structure import mst as mst_mod
-from tests.test_correlation import factor_returns
+from tests.helpers import factor_returns
 
 
 def tree_from(rets: pd.DataFrame, estimator: str = "sample") -> nx.Graph:

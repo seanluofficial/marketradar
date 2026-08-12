@@ -5,29 +5,7 @@ import pandas as pd
 import pytest
 
 from radar.structure import correlation as corr_mod
-
-
-def factor_returns(
-    n_assets: int, n_obs: int, n_blocks: int = 1, market_loading: float = 0.0,
-    block_loading: float = 0.0, seed: int = 0,
-) -> pd.DataFrame:
-    """Synthetic returns with a known factor structure.
-
-    r_i = market_loading * F_market + block_loading * F_block(i) + idiosyncratic
-    """
-    rng = np.random.default_rng(seed)
-    market = rng.standard_normal(n_obs)
-    blocks = rng.standard_normal((n_blocks, n_obs))
-    data = {}
-    for i in range(n_assets):
-        b = i % n_blocks
-        series = (
-            market_loading * market
-            + block_loading * blocks[b]
-            + rng.standard_normal(n_obs)
-        )
-        data[f"A{i:03d}"] = series
-    return pd.DataFrame(data, index=pd.bdate_range("2000-01-03", periods=n_obs))
+from tests.helpers import factor_returns
 
 
 @pytest.mark.parametrize("estimator", corr_mod.ESTIMATORS)

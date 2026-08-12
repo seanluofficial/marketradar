@@ -1,4 +1,4 @@
-"""Tests for the allocation *diagnostic*.
+﻿"""Tests for the allocation *diagnostic*.
 
 These check that the reference weight functions are correct enough to support a
 conclusion about whether clustering matters. They are not a substitute for the
@@ -14,7 +14,7 @@ import pytest
 from radar.metrics import diagnose as dg
 from radar.structure.distance import correlation_to_distance
 from radar.structure.hierarchy import cluster_from_distance
-from tests.test_correlation import factor_returns
+from tests.helpers import factor_returns
 
 
 def covariance(rets: pd.DataFrame) -> pd.DataFrame:

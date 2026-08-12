@@ -1,11 +1,11 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import numpy as np
 import pandas as pd
 import pytest
 
 from radar.structure import distance as dist_mod
-from tests.test_correlation import factor_returns
+from tests.helpers import factor_returns
 
 
 def test_known_values():
