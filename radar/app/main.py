@@ -61,6 +61,14 @@ def get_artifact(name: str):
 
 @st.cache_data(show_spinner="Rebuilding window...")
 def get_correlation(name: str, window_end: pd.Timestamp) -> pd.DataFrame:
+    """Rebuild the selected window from the artifact's bundled returns.
+
+    Falls back to the local price cache only for artifacts built before returns were
+    bundled, so a deployment needs the artifact directory and nothing else.
+    """
+    _, artifact = get_artifact(name)
+    if not artifact.returns.empty:
+        return artifact.correlation_at(window_end)
     return correlation_at(spec_from_name(name), window_end)
 
 
@@ -85,14 +93,22 @@ st.sidebar.caption(
     f"estimator `{spec.estimator}`, step {spec.step}d"
 )
 
-index = st.sidebar.slider(
-    "Window ending", 0, len(ends) - 1, len(ends) - 1,
-    format="",
+# A select_slider over dates rather than a numeric index: the scrubber's own label is
+# the thing the viewer needs to read, and a hidden index forces them to look elsewhere.
+current = st.sidebar.select_slider(
+    "Window ending",
+    options=list(ends),
+    value=ends[-1],
+    format_func=lambda d: pd.Timestamp(d).strftime("%b %Y"),
 )
-current = ends[index]
+current = pd.Timestamp(current)
 row = windows.loc[current]
 
 st.sidebar.markdown(f"### {current.date()}")
+st.sidebar.caption(
+    f"trailing {spec.window} trading days from "
+    f"{pd.Timestamp(row['window_start']).date()}"
+)
 st.sidebar.metric("Absorption ratio", f"{row['absorption_ratio']:.3f}")
 st.sidebar.metric("Effective dimension", f"{row['effective_dimension']:.1f}",
                   help="Independent directions the market is moving in. "
@@ -153,7 +169,7 @@ with tab_network:
                     "distance": neighbours.round(3),
                     "group": [groups.get(t, "") for t in neighbours.index],
                 }),
-                use_container_width=True,
+                width="stretch",
             )
 
 with tab_index:
@@ -209,7 +225,7 @@ with tab_honesty:
             pd.DataFrame(
                 {"ticker": list(panel["dropped"]), "reason": list(panel["dropped"].values())}
             ),
-            use_container_width=True, hide_index=True,
+            width="stretch", hide_index=True,
         )
     if panel["forward_filled"]:
         st.caption(

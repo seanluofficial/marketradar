@@ -1,0 +1,14 @@
+[theme]
+base = "light"
+primaryColor = "#C44E52"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F4F4F6"
+textColor = "#1A1A1A"
+
+[server]
+# The app is read-only: it loads a precomputed artifact and renders it. Nothing is
+# uploaded, so the uploader is disabled and the limit kept small.
+maxUploadSize = 5
+
+[browser]
+gatherUsageStats = false

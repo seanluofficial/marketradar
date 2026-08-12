@@ -69,6 +69,7 @@ class Artifact:
     windows: pd.DataFrame
     edges: pd.DataFrame
     layouts: pd.DataFrame = field(default_factory=pd.DataFrame)
+    returns: pd.DataFrame = field(default_factory=pd.DataFrame)
     meta: dict = field(default_factory=dict)
 
     @property
@@ -85,6 +86,28 @@ class Artifact:
         stamp = pd.Timestamp(window_end)
         frame = self.layouts[self.layouts["window_end"] == stamp]
         return frame.set_index("ticker")[["x", "y"]]
+
+    def correlation_at(self, window_end) -> pd.DataFrame:
+        """Rebuild one window's correlation matrix from the artifact's own returns.
+
+        The artifact ships the return panel it was built from (a few MB) rather than the
+        correlation matrices (tens of MB), so a deployment needs the artifact directory
+        and nothing else -- no price cache, no API key, no network.
+        """
+        if self.returns.empty:
+            raise ValueError(
+                "This artifact has no bundled returns; rebuild it with `radar build`."
+            )
+        stamp = pd.Timestamp(window_end)
+        if stamp not in self.returns.index:
+            raise KeyError(f"{stamp.date()} is not a trading day in the panel.")
+        position = self.returns.index.get_loc(stamp)
+        if position + 1 < self.spec.window:
+            raise ValueError(
+                f"Not enough history before {stamp.date()} for a {self.spec.window}-day window."
+            )
+        window = self.returns.iloc[position + 1 - self.spec.window : position + 1]
+        return estimate_correlation(window, self.spec.estimator).matrix
 
 
 def artifact_dir(spec: ArtifactSpec) -> Path:
@@ -194,9 +217,12 @@ def build_artifact(
     windows.to_parquet(out / "windows.parquet")
     edges.to_parquet(out / "edges.parquet")
     layouts.to_parquet(out / "layouts.parquet")
+    rets.to_parquet(out / "returns.parquet")
     (out / "meta.json").write_text(json.dumps(meta, indent=2, default=str))
 
-    return Artifact(spec=spec, windows=windows, edges=edges, layouts=layouts, meta=meta)
+    return Artifact(
+        spec=spec, windows=windows, edges=edges, layouts=layouts, returns=rets, meta=meta
+    )
 
 
 def load_artifact(spec: ArtifactSpec = ArtifactSpec()) -> Artifact:
@@ -210,8 +236,12 @@ def load_artifact(spec: ArtifactSpec = ArtifactSpec()) -> Artifact:
     edges = pd.read_parquet(out / "edges.parquet")
     layout_path = out / "layouts.parquet"
     layouts = pd.read_parquet(layout_path) if layout_path.exists() else pd.DataFrame()
+    returns_path = out / "returns.parquet"
+    rets = pd.read_parquet(returns_path) if returns_path.exists() else pd.DataFrame()
     meta = json.loads((out / "meta.json").read_text())
-    return Artifact(spec=spec, windows=windows, edges=edges, layouts=layouts, meta=meta)
+    return Artifact(
+        spec=spec, windows=windows, edges=edges, layouts=layouts, returns=rets, meta=meta
+    )
 
 
 def correlation_at(spec: ArtifactSpec, window_end) -> pd.DataFrame:

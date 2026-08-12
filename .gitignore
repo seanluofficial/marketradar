@@ -220,6 +220,12 @@ __marimo__/
 # --- Market Structure Radar ---
 # Raw vendor price cache: reproducible from `radar fetch`, so never committed.
 data/cache/eod/
-# Precomputed rolling-window artifacts. Phase 2 decides whether a small snapshot
-# gets committed for deployment (Streamlit Cloud has no persistent disk).
-data/cache/artifacts/
+# Precomputed rolling-window artifacts ARE committed: Streamlit Community Cloud has no
+# persistent disk and no API key, so the deployed app has to ship the data it renders.
+# Each artifact is self-contained (metrics, MST edges, layouts and the return panel it
+# was built from) and about 7 MB, which is why storing correlation matrices was rejected
+# -- those would have been ~66 MB and unshippable.
+!data/cache/artifacts/
+
+# Research outputs are reproducible from the committed code and the artifact.
+data/cache/research/
