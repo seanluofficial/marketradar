@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- Market Structure Radar ---
+# Raw vendor price cache: reproducible from `radar fetch`, so never committed.
+data/cache/eod/
+# Precomputed rolling-window artifacts. Phase 2 decides whether a small snapshot
+# gets committed for deployment (Streamlit Cloud has no persistent disk).
+data/cache/artifacts/
