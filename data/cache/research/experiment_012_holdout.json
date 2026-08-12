@@ -1,0 +1,122 @@
+{
+  "experiment": "012",
+  "partition": "holdout",
+  "radar_version": "0.1.0",
+  "survivors_tested": [
+    [
+      "core_equity",
+      "lowvol_252d_long"
+    ],
+    [
+      "core_equity",
+      "lowvol_63d_long"
+    ],
+    [
+      "core_equity",
+      "volmanaged_21d"
+    ],
+    [
+      "core_equity",
+      "volmanaged_63d"
+    ]
+  ],
+  "programme_alpha": 0.002,
+  "cells": [
+    {
+      "hypothesis": "H1a",
+      "universe": "core_equity",
+      "variant": "volmanaged_21d",
+      "n_assets": 80,
+      "n_obs": 2007,
+      "sharpe_by_cost": {
+        "10": 0.39199079816458776,
+        "25": 0.36752540235670383,
+        "50": 0.326642691267587
+      },
+      "sharpe": 0.36752540235670383,
+      "t_statistic": 1.0388070615376064,
+      "cagr": 0.0528412481654601,
+      "vol": 0.1901659445156816,
+      "max_drawdown": -0.39166105313761246,
+      "turnover_per_year": 3.118987717518702,
+      "average_exposure": 1.1399227576070203,
+      "breakeven_bps": 249.08172651680616,
+      "benchmark_sharpe": 0.59019736953755,
+      "single_asset_sharpe": null,
+      "beats_benchmark": false,
+      "passes_kill_threshold": true
+    },
+    {
+      "hypothesis": "H1a",
+      "universe": "core_equity",
+      "variant": "volmanaged_63d",
+      "n_assets": 80,
+      "n_obs": 2007,
+      "sharpe_by_cost": {
+        "10": 0.35229305711614084,
+        "25": 0.3408115180999278,
+        "50": 0.3216245484075738
+      },
+      "sharpe": 0.3408115180999278,
+      "t_statistic": 0.9633005212302135,
+      "cagr": 0.04932132712913884,
+      "vol": 0.20469606983064273,
+      "max_drawdown": -0.4847821819482123,
+      "turnover_per_year": 1.5906223805081836,
+      "average_exposure": 1.0725967979439577,
+      "breakeven_bps": 463.58793364765916,
+      "benchmark_sharpe": 0.59019736953755,
+      "single_asset_sharpe": null,
+      "beats_benchmark": false,
+      "passes_kill_threshold": true
+    },
+    {
+      "hypothesis": "H1b",
+      "universe": "core_equity",
+      "variant": "lowvol_63d_long",
+      "n_assets": 80,
+      "n_obs": 2007,
+      "sharpe_by_cost": {
+        "10": 0.4825426316194774,
+        "25": 0.42598017668470667,
+        "50": 0.33129326439086904
+      },
+      "sharpe": 0.42598017668470667,
+      "t_statistic": 1.2040289263750774,
+      "cagr": 0.05379705411392144,
+      "vol": 0.14924977223141556,
+      "max_drawdown": -0.27070256229964273,
+      "turnover_per_year": 5.664003598355038,
+      "average_exposure": 0.968609865470852,
+      "breakeven_bps": 137.24824144469494,
+      "benchmark_sharpe": 0.59019736953755,
+      "single_asset_sharpe": null,
+      "beats_benchmark": false,
+      "passes_kill_threshold": true
+    },
+    {
+      "hypothesis": "H1b",
+      "universe": "core_equity",
+      "variant": "lowvol_252d_long",
+      "n_assets": 80,
+      "n_obs": 2007,
+      "sharpe_by_cost": {
+        "10": 0.35475695716994327,
+        "25": 0.33794616035088443,
+        "50": 0.30981830651595305
+      },
+      "sharpe": 0.33794616035088443,
+      "t_statistic": 0.9552016147479648,
+      "cagr": 0.03948271945618087,
+      "vol": 0.14653521110034357,
+      "max_drawdown": -0.302675750996779,
+      "turnover_per_year": 1.6741668094585331,
+      "average_exposure": 0.874439461883408,
+      "breakeven_bps": 320.79496898290927,
+      "benchmark_sharpe": 0.59019736953755,
+      "single_asset_sharpe": null,
+      "beats_benchmark": false,
+      "passes_kill_threshold": true
+    }
+  ]
+}
