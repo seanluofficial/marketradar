@@ -390,6 +390,30 @@ UNIVERSES: dict[str, Universe] = {
             ),
         ),
         Universe(
+            key="crypto_core",
+            title="Long-history crypto (7 USD pairs)",
+            description=(
+                "The subset of majors with usable history back to 2018. Exists alongside "
+                "crypto_majors so the length-versus-breadth trade-off is visible rather "
+                "than chosen after seeing results: 7 coins over ~8 years, against 14 "
+                "coins over ~5."
+            ),
+            group_label="Sector (prior)",
+            members=tuple(
+                m for m in _CRYPTO_MAJORS
+                if m.ticker in {
+                    "BTCUSD", "ETHUSD", "XRPUSD", "LTCUSD", "DOGEUSD", "ADAUSD", "BCHUSD",
+                }
+            ),
+            asset_class="crypto",
+            max_ffill_days=1,
+            caveats=(
+                "Same severe survivorship problem as crypto_majors: these are coins that "
+                "survived to today, and crypto's defining failures are absent. The longer "
+                "history helps the statistics and does nothing for the bias."
+            ),
+        ),
+        Universe(
             key="sector_etfs",
             title="GICS sector ETFs (11)",
             description=(

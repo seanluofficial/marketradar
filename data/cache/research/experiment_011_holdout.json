@@ -1,0 +1,67 @@
+{
+  "experiment": "011",
+  "partition": "holdout",
+  "radar_version": "0.1.0",
+  "survivors_tested": [
+    [
+      "core_equity",
+      "12m"
+    ],
+    [
+      "core_equity",
+      "6m"
+    ]
+  ],
+  "primary_cost_bps": 25.0,
+  "bonferroni_alpha": 0.0033333333333333335,
+  "cells": [
+    {
+      "universe": "core_equity",
+      "lookback_name": "6m",
+      "lookback": 126,
+      "n_assets": 80,
+      "n_obs": 2007,
+      "sharpe_by_cost": {
+        "10": 0.33806660157270874,
+        "25": 0.31037762520279777,
+        "50": 0.2641122046924765
+      },
+      "sharpe": 0.31037762520279777,
+      "t_statistic": 0.8772794118078672,
+      "cagr": 0.030251768660716216,
+      "vol": 0.11939277939915503,
+      "max_drawdown": -0.30980512092098034,
+      "turnover_per_year": 2.2186621830020563,
+      "average_exposure": 0.6043908819133034,
+      "breakeven_bps": 192.02338742775282,
+      "benchmark_sharpe": 0.59019736953755,
+      "benchmark_cagr": 0.0981119047025849,
+      "single_asset_sharpe": null,
+      "passes_kill_threshold": true
+    },
+    {
+      "universe": "core_equity",
+      "lookback_name": "12m",
+      "lookback": 252,
+      "n_assets": 80,
+      "n_obs": 2007,
+      "sharpe_by_cost": {
+        "10": 0.4741973294354099,
+        "25": 0.45569285492813966,
+        "50": 0.424776655547275
+      },
+      "sharpe": 0.45569285492813966,
+      "t_statistic": 1.2880115294238759,
+      "cagr": 0.046115427147277455,
+      "vol": 0.1131535575402375,
+      "max_drawdown": -0.25660006588353734,
+      "turnover_per_year": 1.409742332076765,
+      "average_exposure": 0.5894618834080717,
+      "breakeven_bps": 390.7637747518038,
+      "benchmark_sharpe": 0.59019736953755,
+      "benchmark_cagr": 0.0981119047025849,
+      "single_asset_sharpe": null,
+      "passes_kill_threshold": true
+    }
+  ]
+}

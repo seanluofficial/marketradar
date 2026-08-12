@@ -95,6 +95,32 @@ which is conservative in a positive-rate environment and is stated rather than t
 - **This is not a deployment.** A surviving cell would justify further out-of-sample
   observation, not capital.
 
+## Amendments
+
+### 2026-08-12 — `crypto_core` start date, and annualisation
+
+Recorded after the first explore run, **before the holdout was opened for any cell.**
+Both changes are disclosed rather than silently applied, and the superseded numbers are
+stated so the reader can judge whether the amendment flattered the result.
+
+**1. `crypto_core` start moves 2018-01-01 → 2019-01-01.** Tiingo's 2018 crypto coverage
+has multi-day holes, and under the universe's 1-day forward-fill limit that dropped 6 of
+the 7 coins, leaving a single-asset panel. The cell therefore tested BTC-only trend
+following, not the 7-coin basket that was registered. Superseded explore result for the
+mislabelled cell: Sharpe 0.245 / 0.736 / 0.596 at 3m / 6m / 12m. The amendment is made on
+data-coverage grounds, visible from the panel's drop report and not from the performance
+numbers, and it *reduces* the sample rather than extending it.
+
+**2. Annualisation is now inferred from the data rather than fixed at 252.** Crypto trades
+every calendar day, so annualising it at 252 periods understated crypto Sharpes by
+sqrt(365/252) ≈ 20%. This was a bug in the first run and affects the crypto cells only. It
+makes crypto results *better*, which is the uncomfortable direction, so it is flagged
+explicitly: no crypto cell should be read as clearing a threshold it only reached because
+of this correction.
+
+Neither amendment changes the decision rules, the panel size, or the significance
+threshold. The count remains 15 cells and the Bonferroni bar remains p < 0.0033.
+
 ## Expected outcome
 
 Stated in advance so it cannot be revised afterwards: **H0 is not rejected in any cell.**
