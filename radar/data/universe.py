@@ -42,6 +42,15 @@ class Universe:
     members: tuple[Member, ...]
     caveats: str = ""
 
+    #: Which Tiingo endpoint backs this universe. Crypto has a different response
+    #: shape and no corporate actions.
+    asset_class: str = "equity"
+
+    #: Gap length, in calendar days, still treated as a halt rather than missing
+    #: history. Equities trade ~252 days a year, so 3 days spans a weekend; crypto
+    #: trades every calendar day, where a 3-day hole is a genuine outage.
+    max_ffill_days: int = 3
+
     @property
     def tickers(self) -> tuple[str, ...]:
         return tuple(m.ticker for m in self.members)
@@ -74,6 +83,8 @@ class Universe:
             group_label=self.group_label,
             members=members,
             caveats=self.caveats,
+            asset_class=self.asset_class,
+            max_ffill_days=self.max_ffill_days,
         )
 
 
@@ -296,6 +307,34 @@ _SECTOR_ETFS: list[Member] = [
 ]
 
 
+# --------------------------------------------------------------------------------------
+# crypto_majors: liquid USD pairs, grouped by a *prior* taxonomy.
+#
+# The groups here are a hypothesis, not a fact. Unlike GICS -- which is assigned by an
+# index provider and has decades of use -- these categories are the author's, and the
+# whole point of scoring a tree against them is to find out whether crypto returns respect
+# them at all. A low purity lift is a finding, not a bug.
+# --------------------------------------------------------------------------------------
+_CRYPTO_MAJORS: list[Member] = [
+    *_m("Store of value", [("BTCUSD", "Bitcoin")]),
+    *_m(
+        "Smart contract L1",
+        [
+            ("ETHUSD", "Ethereum"),
+            ("SOLUSD", "Solana"),
+            ("ADAUSD", "Cardano"),
+            ("AVAXUSD", "Avalanche"),
+            ("ALGOUSD", "Algorand"),
+        ],
+    ),
+    *_m("Interoperability L1", [("DOTUSD", "Polkadot"), ("ATOMUSD", "Cosmos")]),
+    *_m("Payments", [("XRPUSD", "XRP"), ("LTCUSD", "Litecoin"), ("BCHUSD", "Bitcoin Cash")]),
+    *_m("DeFi", [("LINKUSD", "Chainlink"), ("UNIUSD", "Uniswap"), ("AAVEUSD", "Aave")]),
+    *_m("Exchange", [("BNBUSD", "BNB")]),
+    *_m("Meme", [("DOGEUSD", "Dogecoin")]),
+]
+
+
 UNIVERSES: dict[str, Universe] = {
     u.key: u
     for u in (
@@ -325,6 +364,29 @@ UNIVERSES: dict[str, Universe] = {
                 "History is limited by the youngest fund (EMB and UUP both launched 2007), so "
                 "the usable common window starts around 2007-04 and excludes 2000-02. ETF "
                 "returns are NAV-tracking proxies, not the underlying asset."
+            ),
+        ),
+        Universe(
+            key="crypto_majors",
+            title="Liquid crypto majors (16 USD pairs)",
+            description=(
+                "Diagnostic universe for the allocator project: does crypto have enough "
+                "correlation structure for hierarchical clustering to exploit? Measured "
+                "rather than assumed."
+            ),
+            group_label="Sector (prior)",
+            members=tuple(_CRYPTO_MAJORS),
+            asset_class="crypto",
+            # Crypto trades every calendar day, so a 3-day hole is an outage, not a
+            # weekend. One day of carry-forward is the most that is defensible.
+            max_ffill_days=1,
+            caveats=(
+                "Survivorship here is severe rather than mild: this is a basket of coins "
+                "that are liquid *today*, and the failures that define crypto's history "
+                "(LUNA/UST, FTT, and a long tail of dead tokens) are absent entirely. "
+                "Usable history also starts around 2017 and later for several members, so "
+                "there are few genuinely independent periods. Group labels are the "
+                "author's prior taxonomy, not an index provider's classification."
             ),
         ),
         Universe(

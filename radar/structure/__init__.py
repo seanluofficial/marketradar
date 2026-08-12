@@ -1,4 +1,4 @@
-"""Market structure: correlation -> distance -> minimum spanning tree.
+﻿"""Market structure: correlation -> distance -> minimum spanning tree.
 
 Pure functions over a return panel. Nothing here touches the network or the clock, so
 any result can be reproduced from the cached prices alone.
@@ -13,6 +13,15 @@ from radar.structure.correlation import (
     marchenko_pastur_edge,
     rmt_clipped_correlation,
     sample_correlation,
+)
+from radar.structure.hierarchy import (
+    DEFAULT_METHOD,
+    LINKAGE_METHODS,
+    ClusteringResult,
+    cluster_from_distance,
+    cluster_stability,
+    clustering,
+    quasi_diagonal_order,
 )
 from radar.structure.distance import (
     INDEPENDENT_DISTANCE,
@@ -32,10 +41,17 @@ from radar.structure.mst import (
 
 __all__ = [
     "DEFAULT_ESTIMATOR",
+    "DEFAULT_METHOD",
     "ESTIMATORS",
     "INDEPENDENT_DISTANCE",
+    "LINKAGE_METHODS",
+    "ClusteringResult",
     "CorrelationResult",
     "build_mst",
+    "cluster_from_distance",
+    "cluster_stability",
+    "clustering",
+    "quasi_diagonal_order",
     "correlation_to_distance",
     "degrees",
     "edge_survival",

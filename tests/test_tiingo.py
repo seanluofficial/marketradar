@@ -160,6 +160,65 @@ def test_fetch_ticker_records_errors_without_raising():
     assert cache.read_eod("BOGUS") is None
 
 
+CRYPTO_SAMPLE = [
+    {
+        "ticker": "btcusd",
+        "baseCurrency": "btc",
+        "quoteCurrency": "usd",
+        "priceData": [
+            {"date": "2021-09-02T00:00:00+00:00", "open": 48800.0, "high": 50500.0,
+             "low": 48600.0, "close": 49300.0, "volume": 1234.5},
+            {"date": "2021-09-03T00:00:00+00:00", "open": 49300.0, "high": 51000.0,
+             "low": 49100.0, "close": 50000.0, "volume": 2345.6},
+        ],
+    }
+]
+
+
+def test_crypto_prices_map_onto_the_equity_cache_schema():
+    """Crypto reuses the equity schema so return construction, alignment and the whole
+    structure layer run unchanged over both asset classes."""
+    c = client(FakeResponse(200, CRYPTO_SAMPLE))
+    df = c.crypto_prices("BTCUSD", start=date(2021, 9, 1))
+
+    assert list(df.columns) == cache.EOD_COLUMNS
+    assert df.index.tz is None
+    assert df.index[0] == pd.Timestamp("2021-09-02")
+    assert df["close"].iloc[1] == 50000.0
+    # No corporate actions in crypto, so adjusted == raw and the action columns are inert.
+    assert (df["adj_close"] == df["close"]).all()
+    assert (df["div_cash"] == 0.0).all()
+    assert (df["split_factor"] == 1.0).all()
+
+
+def test_crypto_request_uses_the_crypto_endpoint_and_daily_resampling():
+    session = FakeSession([FakeResponse(200, CRYPTO_SAMPLE)])
+    c = tiingo.TiingoClient(api_key="k", session=session)
+    c.crypto_prices("BTCUSD", start=date(2021, 9, 1))
+
+    url, params = session.calls[0]
+    assert url.endswith("/tiingo/crypto/prices")
+    assert params["tickers"] == "btcusd"
+    assert params["resampleFreq"] == "1day"
+
+
+def test_crypto_empty_payload_yields_schema_only_frame():
+    assert client(FakeResponse(200, [])).crypto_prices("NOPEUSD").empty
+    # A known-shaped response with no priceData must behave the same way.
+    empty = [{"ticker": "nopeusd", "priceData": []}]
+    assert client(FakeResponse(200, empty)).crypto_prices("NOPEUSD").empty
+
+
+def test_fetch_ticker_dispatches_on_asset_class():
+    c = client(FakeResponse(200, CRYPTO_SAMPLE))
+    row = tiingo.fetch_ticker(
+        "BTCUSD", start=date(2021, 9, 1), client=c, asset_class="crypto"
+    )
+    assert row["status"] == "fetched"
+    assert row["rows_added"] == 2
+    assert cache.read_eod("BTCUSD") is not None
+
+
 def test_fetch_universe_continues_past_a_failure(monkeypatch):
     """A rate limit mid-run must leave the earlier tickers cached and resumable."""
     calls = []

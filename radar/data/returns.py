@@ -44,6 +44,7 @@ class PanelReport:
     end: date | None = None
     n_obs: int = 0
     filled_values: int = 0
+    max_ffill_days: int = MAX_FFILL_DAYS
 
     @property
     def n_assets(self) -> int:
@@ -68,13 +69,15 @@ class PanelReport:
         return "\n".join(lines)
 
 
-def _resolve(universe: Universe | str | None, tickers: list[str] | None) -> list[str]:
-    if tickers is not None:
-        return list(tickers)
+def _resolve(
+    universe: Universe | str | None, tickers: list[str] | None
+) -> tuple[list[str], Universe | None]:
     if universe is None:
-        raise ValueError("Provide either `universe` or `tickers`.")
+        if tickers is None:
+            raise ValueError("Provide either `universe` or `tickers`.")
+        return list(tickers), None
     uni = get_universe(universe) if isinstance(universe, str) else universe
-    return list(uni.tickers)
+    return (list(tickers) if tickers is not None else list(uni.tickers)), uni
 
 
 def price_panel(
@@ -83,6 +86,7 @@ def price_panel(
     start: date | None = None,
     end: date | None = None,
     field_name: str = "adj_close",
+    max_ffill_days: int | None = None,
 ) -> tuple[pd.DataFrame, PanelReport]:
     """Aligned price panel (dates x tickers) read entirely from the disk cache.
 
@@ -96,8 +100,13 @@ def price_panel(
     visible rather than silent -- but it means you usually want to pass `start`
     explicitly. `coverage_frontier()` shows what each choice costs in assets.
     """
-    names = _resolve(universe, tickers)
-    report = PanelReport(requested=tuple(names), retained=())
+    names, uni = _resolve(universe, tickers)
+    # Crypto trades every calendar day, so the equity default of 3 days spans an outage
+    # rather than a weekend. The limit belongs to the universe, not to this module.
+    fill_limit = max_ffill_days if max_ffill_days is not None else (
+        uni.max_ffill_days if uni is not None else MAX_FFILL_DAYS
+    )
+    report = PanelReport(requested=tuple(names), retained=(), max_ffill_days=fill_limit)
 
     series: dict[str, pd.Series] = {}
     for ticker in names:
@@ -173,7 +182,7 @@ def price_panel(
     last_traded = {t: panel[t].last_valid_index() for t in panel.columns}
 
     missing_before = int(panel.isna().sum().sum())
-    panel = panel.ffill(limit=MAX_FFILL_DAYS)
+    panel = panel.ffill(limit=fill_limit)
     report.filled_values = missing_before - int(panel.isna().sum().sum())
 
     panel_end = panel.index[-1]
@@ -194,7 +203,7 @@ def price_panel(
                 f"{gaps} missing sessions to {panel_end.date()}"
             )
         else:
-            report.dropped[ticker] = f"{gaps} unfillable gaps (> {MAX_FFILL_DAYS}d)"
+            report.dropped[ticker] = f"{gaps} unfillable gaps (> {fill_limit}d)"
     panel = panel.drop(columns=residual)
 
     report.retained = tuple(panel.columns)
@@ -225,13 +234,17 @@ def returns_panel(
     tickers: list[str] | None = None,
     start: date | None = None,
     end: date | None = None,
+    max_ffill_days: int | None = None,
 ) -> tuple[pd.DataFrame, PanelReport]:
     """The pipeline entry point: cache -> aligned prices -> log returns.
 
     The returned frame is guaranteed rectangular and NaN-free, so every downstream
     correlation is estimated on one common sample.
     """
-    prices, report = price_panel(universe=universe, tickers=tickers, start=start, end=end)
+    prices, report = price_panel(
+        universe=universe, tickers=tickers, start=start, end=end,
+        max_ffill_days=max_ffill_days,
+    )
     if prices.empty:
         return prices, report
 

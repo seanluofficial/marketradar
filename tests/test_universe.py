@@ -47,6 +47,31 @@ def test_subset_preserves_order_and_metadata():
     assert sub.groups["XOM"] == "Energy"
 
 
+def test_crypto_universe_declares_its_asset_class_and_calendar():
+    """Crypto trades every calendar day, so the equity fill limit of 3 days would span a
+    genuine outage rather than a weekend."""
+    crypto = universe.get_universe("crypto_majors")
+    assert crypto.asset_class == "crypto"
+    assert crypto.max_ffill_days == 1
+    assert all(t.endswith("USD") for t in crypto.tickers)
+
+    equity = universe.get_universe("core_equity")
+    assert equity.asset_class == "equity"
+    assert equity.max_ffill_days == 3
+
+
+def test_subset_preserves_asset_class_and_fill_limit():
+    crypto = universe.get_universe("crypto_majors")
+    sub = crypto.subset(["BTCUSD", "ETHUSD"])
+    assert sub.asset_class == "crypto"
+    assert sub.max_ffill_days == 1
+
+
+def test_crypto_caveats_name_the_survivorship_problem():
+    caveats = universe.get_universe("crypto_majors").caveats
+    assert "LUNA" in caveats and "FTT" in caveats
+
+
 def test_unknown_universe_raises_with_available_keys():
     with pytest.raises(KeyError, match="core_equity"):
         universe.get_universe("nope")

@@ -85,6 +85,22 @@ def test_interior_gap_is_still_reported_as_a_gap(make_series):
     assert "unfillable gaps" in report.dropped["HOLEY"]
 
 
+def test_fill_limit_comes_from_the_universe(make_series):
+    """A 2-day hole is a weekend for equities and an outage for crypto, so the limit is
+    a property of the universe rather than a module-level constant."""
+    make_series("AAA", start="2020-01-01", periods=100, seed=1)
+    gap = ["2020-02-05", "2020-02-06"]
+    make_series("GAPPY", start="2020-01-01", periods=100, seed=2, drop_dates=gap)
+
+    lenient, rep_lenient = returns.returns_panel(tickers=["AAA", "GAPPY"], max_ffill_days=3)
+    assert set(rep_lenient.retained) == {"AAA", "GAPPY"}
+    assert rep_lenient.filled_values == 2
+
+    strict, rep_strict = returns.returns_panel(tickers=["AAA", "GAPPY"], max_ffill_days=1)
+    assert rep_strict.retained == ("AAA",)
+    assert "unfillable gaps (> 1d)" in rep_strict.dropped["GAPPY"]
+
+
 def test_log_returns_match_the_definition(make_series):
     prices = pd.DataFrame(
         {"X": [100.0, 110.0, 99.0]}, index=pd.bdate_range("2020-01-01", periods=3)

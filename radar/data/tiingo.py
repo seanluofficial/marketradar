@@ -27,6 +27,9 @@ from radar.data import cache
 #: Far enough back to cover the dot-com unwind for the names that traded through it.
 DEFAULT_START = date(1998, 1, 1)
 
+#: Crypto has no comparable history; anything earlier is illiquid or nonexistent.
+CRYPTO_DEFAULT_START = date(2016, 1, 1)
+
 #: When extending a cached series we re-fetch a few days of overlap. Tiingo restates
 #: adjusted prices when a split or dividend lands, so the tail is not immutable.
 REFETCH_OVERLAP_DAYS = 7
@@ -92,6 +95,45 @@ class TiingoClient:
         df = df[list(present)].rename(columns=present)
         return df.sort_index()
 
+    def crypto_prices(
+        self,
+        ticker: str,
+        start: date = CRYPTO_DEFAULT_START,
+        end: date | None = None,
+    ) -> pd.DataFrame:
+        """Daily OHLCV for one crypto pair, mapped onto the equity cache schema.
+
+        Crypto has no splits or dividends, so `adj_close` is set equal to `close` and the
+        corporate-action columns are zero/one. That is not a fudge -- it means the same
+        return construction, alignment and structure code runs unchanged over both asset
+        classes, which is the whole reason the cache has a single schema.
+        """
+        params = {
+            "tickers": ticker.lower(),
+            "startDate": start.isoformat(),
+            "resampleFreq": "1day",
+        }
+        if end is not None:
+            params["endDate"] = end.isoformat()
+
+        payload = self._get("/tiingo/crypto/prices", params, ticker)
+        rows = payload[0].get("priceData", []) if payload else []
+        if not rows:
+            return pd.DataFrame(columns=cache.EOD_COLUMNS)
+
+        df = pd.DataFrame(rows)
+        df["date"] = pd.to_datetime(df["date"], utc=True, format="ISO8601")
+        df = df.set_index("date")
+        df.index = df.index.tz_convert(None).normalize()
+
+        keep = [c for c in ("open", "high", "low", "close", "volume") if c in df.columns]
+        df = df[keep].astype(float)
+        df["adj_close"] = df["close"]
+        df["div_cash"] = 0.0
+        df["split_factor"] = 1.0
+        df = df.reindex(columns=cache.EOD_COLUMNS)
+        return df[~df.index.duplicated(keep="last")].sort_index()
+
     def _get(self, path: str, params: dict, ticker: str) -> list[dict]:
         url = f"{TIINGO_BASE_URL}{path}"
         last_error: Exception | None = None
@@ -152,6 +194,7 @@ def fetch_ticker(
     end: date | None = None,
     client: TiingoClient | None = None,
     force: bool = False,
+    asset_class: str = "equity",
 ) -> dict:
     """Bring one ticker's cache up to date. Returns a status row (never raises)."""
     row = {"ticker": ticker, "status": "", "rows_added": 0, "start": None, "end": None}
@@ -169,8 +212,9 @@ def fetch_ticker(
         row["rows_added"] = 0
     else:
         client = client or TiingoClient()
+        fetch = client.crypto_prices if asset_class == "crypto" else client.daily_prices
         try:
-            fresh = client.daily_prices(ticker, start=request_start, end=end)
+            fresh = fetch(ticker, start=request_start, end=end)
         except TiingoError as exc:
             row["status"] = f"error: {exc}"
             return row
@@ -195,6 +239,7 @@ def fetch_universe(
     end: date | None = None,
     force: bool = False,
     progress: bool = True,
+    asset_class: str = "equity",
 ) -> pd.DataFrame:
     """Update the cache for many tickers.
 
@@ -205,7 +250,10 @@ def fetch_universe(
     client = TiingoClient()
     rows = []
     for i, ticker in enumerate(tickers, start=1):
-        row = fetch_ticker(ticker, start=start, end=end, client=client, force=force)
+        row = fetch_ticker(
+            ticker, start=start, end=end, client=client, force=force,
+            asset_class=asset_class,
+        )
         rows.append(row)
         if progress:
             print(

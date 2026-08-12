@@ -37,8 +37,12 @@ def cmd_fetch(args: argparse.Namespace) -> int:
     else:
         tickers = list(universe.get_universe(args.universe).tickers)
 
-    print(f"Fetching {len(tickers)} tickers into {CACHE_DIR}")
-    report = returns_safe_fetch(tickers, args)
+    asset_class = (
+        "equity" if args.universe == "all"
+        else universe.get_universe(args.universe).asset_class
+    )
+    print(f"Fetching {len(tickers)} {asset_class} tickers into {CACHE_DIR}")
+    report = returns_safe_fetch(tickers, args, asset_class)
     if report is None:
         return 1
 
@@ -52,15 +56,21 @@ def cmd_fetch(args: argparse.Namespace) -> int:
     return 0
 
 
-def returns_safe_fetch(tickers: list[str], args: argparse.Namespace) -> pd.DataFrame | None:
+def returns_safe_fetch(
+    tickers: list[str], args: argparse.Namespace, asset_class: str = "equity"
+) -> pd.DataFrame | None:
     from radar.data import tiingo
 
+    default_start = (
+        tiingo.CRYPTO_DEFAULT_START if asset_class == "crypto" else DEFAULT_START
+    )
     try:
         return tiingo.fetch_universe(
             tickers,
-            start=_parse_date(args.start) or DEFAULT_START,
+            start=_parse_date(args.start) or default_start,
             end=_parse_date(args.end),
             force=args.force,
+            asset_class=asset_class,
         )
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -99,6 +109,21 @@ def cmd_panel(args: argparse.Namespace) -> int:
         print(f"  q = N/T at {window:>3}d window: {q:.3f}{flag}")
     print(f"\nAnnualised vol of the equal-weight basket: "
           f"{rets.mean(axis=1).std() * (252 ** 0.5):.1%}")
+    return 0
+
+
+def cmd_diagnose(args: argparse.Namespace) -> int:
+    from radar.metrics.diagnose import structure_diagnostic
+
+    report = structure_diagnostic(
+        universe=args.universe,
+        start=args.start,
+        end=args.end,
+        window=args.window,
+        step=args.step,
+        estimator=args.estimator,
+    )
+    print(report.summary())
     return 0
 
 
@@ -167,6 +192,17 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--start", default=None)
     p.add_argument("--end", default=None)
     p.set_defaults(func=cmd_panel)
+
+    p = sub.add_parser(
+        "diagnose", help="is there enough structure in this universe to be worth exploiting?"
+    )
+    p.add_argument("--universe", default=universe.DEFAULT_UNIVERSE)
+    p.add_argument("--start", default=None)
+    p.add_argument("--end", default=None)
+    p.add_argument("--window", type=int, default=252)
+    p.add_argument("--step", type=int, default=5)
+    p.add_argument("--estimator", default="ledoit_wolf", choices=list(ESTIMATORS))
+    p.set_defaults(func=cmd_diagnose)
 
     p = sub.add_parser("build", help="precompute rolling-window artifacts for the app")
     p.add_argument("--universe", default=universe.DEFAULT_UNIVERSE)
