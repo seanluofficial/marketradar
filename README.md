@@ -11,15 +11,28 @@ The output is a picture of how assets are moving together right now, and how tha
 
 ## Status
 
-Phase 1 of 5 complete: data adapter, universes, cache, return construction.
+Phases 1 and 2 of 5 complete: data layer, structure layer, and precomputed artifacts.
 
 | Phase | Scope | State |
 |---|---|---|
 | 1 | Tiingo adapter, universes, disk cache, aligned return panels | done |
-| 2 | Correlation estimators (sample / Ledoit-Wolf / RMT), MST, precomputed window artifacts | next |
-| 3 | Rolling windows, time scrubber, absorption ratio, edge-survival metric | |
+| 2 | Correlation estimators (sample / Ledoit-Wolf / RMT), MST, absorption ratio, precomputed window artifacts | done |
+| 3 | Streamlit app: time scrubber, network view, systemic-risk chart with crisis annotations | next |
 | 4 | Hierarchical clustering, dendrogram, classical MDS embedding, node drill-down | |
-| 5 | Cross-asset view, deploy | |
+| 5 | Cross-asset view, survivorship-repair comparison, deploy | |
+
+### What the built artifact shows (80 names, 2001–2026, 1288 weekly windows)
+
+| | calm | peak stress |
+|---|---|---|
+| absorption ratio | 0.589 (2001-01) | **0.882 (2020-04-22)** |
+| mean correlation | 0.114 | 0.615 |
+| effective dimension | 20.8 independent directions | **2.5** |
+| MST tree length | 1.063 | 0.612 |
+
+Absorption-ratio peaks land on 2008-12, 2009-08, 2011-12, 2012-05, 2020-04, 2022-12 and
+2023-02 — the actual crises, with no event labels supplied. MST edge purity against GICS
+sectors runs at a median 8.0× the random baseline across all 1288 windows.
 
 ## Quickstart
 
@@ -33,6 +46,7 @@ radar fetch --universe all      # populate the cache (resumable)
 radar status                    # what landed
 radar panel --start 2005-01-01  # build the return panel, see what was dropped and why
 radar coverage                  # the history-vs-breadth trade-off, quantified
+radar build --start 2000-01-01  # precompute every rolling window (~2 min, 1.4 MB out)
 ```
 
 `radar fetch` is incremental and resumable. It only ever requests the missing tail of a
@@ -52,14 +66,20 @@ warning; that regime is shown as a demonstration of what breaks, not as a defaul
 **The systemic-risk index has a name and a caveat.** It is the absorption ratio (Kritzman,
 Page & Turkington 2010) — the share of variance captured by the leading eigenvectors. For a
 roughly equicorrelated matrix λ₁/N ≈ ρ̄, so it is close to a monotone transform of average
-pairwise correlation. Mean pairwise ρ is therefore plotted alongside it rather than hidden.
+pairwise correlation. Measured on our data the two correlate at **0.85** — strongly related
+but not identical — so mean pairwise ρ is plotted alongside it rather than hidden.
 Overlapping windows also make the series autocorrelated by construction, so week-to-week
-moves are not independent evidence.
+moves are not independent evidence. Note also that absorption ratio and MST tree length
+correlate at **−0.99**: the tree contributes topology, but as a scalar index it is nearly
+the same signal, and presenting them as two independent confirmations would be misleading.
 
 **MST instability is measured, not hidden.** Minimum spanning tree edges churn under
 estimation noise, and a re-laid-out graph per frame would make sampling error look like
 structural change. Layouts warm-start from the previous frame, and edge survival ratio
-(Onnela et al.) is plotted as a first-class metric.
+(Onnela et al.) is plotted as a first-class metric. The measured numbers justify the
+worry: between windows five trading days apart — sharing 247 of 252 observations —
+median survival is only **0.873**, and between non-overlapping annual windows it is
+**0.33–0.48**. Roughly 60% of the tree turns over year to year.
 
 **Classical MDS, not t-SNE/UMAP.** The Mantegna distance d = √(2(1−ρ)) is a proper metric,
 so MDS is the principled embedding for it — and it is deterministic, which means it stays
@@ -84,12 +104,17 @@ resilient firms, so the crisis-period correlation collapse shown here is an *und
 radar/
   config.py        paths, key loading
   data/            Tiingo adapter, disk cache, universes, return panels
-  structure/       (phase 2) correlation -> distance -> MST -> clustering -> PCA
-  metrics/         (phase 3) absorption ratio, edge survival, structure over time
+  structure/       correlation estimators -> Mantegna distance -> MST
+  metrics/         absorption ratio, effective dimension, rolling-window artifacts
   viz/             (phase 4) network, dendrogram, heatmap, MDS embedding
-  app/             (phase 5) Streamlit
+  app/             (phase 3) Streamlit
 tests/
 ```
+
+Artifacts hold per-window scalar metrics and MST edges, but **not** correlation matrices:
+80×80 floats across 1288 windows would be ~66 MB, while recomputing a single selected
+window costs about a millisecond. So the whole artifact is 1.4 MB and the app rebuilds the
+one frame you are looking at.
 
 The network boundary is exactly one module (`radar/data/tiingo.py`). Everything above it
 reads from the disk cache, so the whole pipeline is reproducible offline and the deployed
@@ -112,7 +137,7 @@ rewrite the strategy that generated an existing paper track record.
 pytest -q
 ```
 
-44 tests, no network and no API key required — the adapter is exercised against canned
+120 tests, no network and no API key required — the adapter is exercised against canned
 responses and the panel logic against synthetic series.
 
 ## References

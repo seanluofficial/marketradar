@@ -11,6 +11,7 @@ import pandas as pd
 from radar.config import CACHE_DIR, ConfigError, ensure_dirs
 from radar.data import cache, returns, universe
 from radar.data.tiingo import DEFAULT_START
+from radar.structure.correlation import ESTIMATORS
 
 
 def _parse_date(value: str | None) -> date | None:
@@ -101,6 +102,43 @@ def cmd_panel(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_build(args: argparse.Namespace) -> int:
+    from radar.metrics.rolling import ArtifactSpec, artifact_dir, build_artifact
+
+    spec = ArtifactSpec(
+        universe=args.universe,
+        start=args.start,
+        end=args.end,
+        window=args.window,
+        step=args.step,
+        estimator=args.estimator,
+    )
+    print(f"Building {spec.name}")
+    artifact = build_artifact(spec)
+
+    w = artifact.windows
+    print(f"\n{len(w)} windows, {w.index[0].date()} -> {w.index[-1].date()}")
+    print(f"  written to {artifact_dir(spec)}")
+    print(
+        f"\n  absorption ratio  {w['absorption_ratio'].min():.3f} - "
+        f"{w['absorption_ratio'].max():.3f}  (peak {w['absorption_ratio'].idxmax().date()})"
+    )
+    print(
+        f"  mean correlation  {w['mean_correlation'].min():.3f} - "
+        f"{w['mean_correlation'].max():.3f}"
+    )
+    print(
+        f"  tree length       {w['tree_length'].min():.3f} - {w['tree_length'].max():.3f}"
+    )
+    print(
+        f"  edge survival     median {w['edge_survival'].median():.3f} "
+        f"(overlapping windows -- frame-to-frame jitter, not annual turnover)"
+    )
+    print(f"  MST purity        median {w['purity'].median():.3f}, "
+          f"lift {w['purity_lift'].median():.1f}x")
+    return 0
+
+
 def cmd_coverage(args: argparse.Namespace) -> int:
     print(returns.coverage_frontier(universe=args.universe).to_string())
     return 0
@@ -129,6 +167,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--start", default=None)
     p.add_argument("--end", default=None)
     p.set_defaults(func=cmd_panel)
+
+    p = sub.add_parser("build", help="precompute rolling-window artifacts for the app")
+    p.add_argument("--universe", default=universe.DEFAULT_UNIVERSE)
+    p.add_argument("--start", default="2000-01-01")
+    p.add_argument("--end", default=None)
+    p.add_argument("--window", type=int, default=252, help="trading days (default 252)")
+    p.add_argument("--step", type=int, default=5, help="days between windows (default 5)")
+    p.add_argument("--estimator", default="rmt_clipped", choices=list(ESTIMATORS))
+    p.set_defaults(func=cmd_build)
 
     p = sub.add_parser("coverage", help="assets retained vs. start date trade-off")
     p.add_argument("--universe", default=universe.DEFAULT_UNIVERSE)
