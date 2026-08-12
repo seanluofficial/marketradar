@@ -19,10 +19,13 @@ dependencies = [
     "pyarrow>=14.0",
     "requests>=2.31",
     "python-dotenv>=1.0",
+    # A core dependency, not an app extra: radar/viz/plots.py is a library module and its
+    # figures are covered by the test suite, so a bare install must be able to run it.
+    "matplotlib>=3.8",
 ]
 
 [project.optional-dependencies]
-app = ["streamlit>=1.30", "matplotlib>=3.8"]
+app = ["streamlit>=1.50"]
 dev = ["pytest>=7.4"]
 
 [project.scripts]
