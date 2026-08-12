@@ -1,5 +1,9 @@
 # Market Structure Radar
 
+[![tests](https://github.com/seanluofficial/marketradar/actions/workflows/tests.yml/badge.svg)](https://github.com/seanluofficial/marketradar/actions/workflows/tests.yml)
+[![live app](https://img.shields.io/badge/live-streamlit-C44E52)](https://marketradar-9m9rrx4hps5vpywf2dqfn5.streamlit.app)
+[![license](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
+
 Unsupervised market-structure analytics — filtered correlation networks, minimum spanning
 trees, hierarchical clustering and a PCA-based systemic-risk index — plus a pre-registered
 research programme testing whether any of it predicts anything.
@@ -7,6 +11,16 @@ research programme testing whether any of it predicts anything.
 **It doesn't, and that's the finding.** This is descriptive risk analytics, not a trading
 signal, and the repository is built so that claim can be checked rather than taken on
 trust.
+
+**▶ [Open the live app](https://marketradar-9m9rrx4hps5vpywf2dqfn5.streamlit.app)** ·
+[the research programme](research/) ·
+[sibling project: hindsight](https://github.com/seanluofficial/hindsight)
+
+![The correlation network collapsing through the COVID crash and partially recovering, alongside the absorption ratio spiking to 0.882](docs/media/structure-covid.gif)
+
+*June 2019 – May 2021. No sector labels are supplied to the tree; they only colour it.
+As the crash arrives the branches fuse toward a single hub and the absorption ratio
+spikes to 0.882 — 80 assets moving like 2.5 independent ones.*
 
 ```bash
 pip install -e ".[app,dev]"
@@ -54,8 +68,11 @@ decision rules and predicted outcome **before** the code to test it existed.
 | 012 low-volatility anomaly | 0.644 | 0.338 (benchmark 0.590) | **null** |
 
 **Zero of 25 cells survived.** Every explore result was encouraging enough to be tempting;
-every holdout removed it. See [`research/`](research/) for the pre-registrations, the
-amendments with their superseded numbers, and the results.
+every holdout removed it.
+
+> **→ [`research/`](research/README.md) — the pre-registrations, the dated amendments with
+> their superseded numbers, and the results.** Each hypothesis was committed to git,
+> with its decision rules and predicted outcome, before the code that tested it existed.
 
 The backtester carries a **positive control** — a clairvoyant signal must score Sharpe > 5
 — so a null result cannot be an artefact of broken plumbing. Signals earn from t+1, costs
