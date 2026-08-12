@@ -34,6 +34,7 @@ from radar.metrics.absorption import (
 )
 from radar.structure.correlation import DEFAULT_ESTIMATOR, estimate_correlation
 from radar.structure.distance import correlation_to_distance
+from radar.viz.layout import chained_layouts, layout_drift
 from radar.structure.mst import (
     build_mst,
     edge_survival,
@@ -62,11 +63,12 @@ class ArtifactSpec:
 
 @dataclass
 class Artifact:
-    """A loaded artifact: per-window metrics, MST edges, and provenance."""
+    """A loaded artifact: per-window metrics, MST edges, layouts, and provenance."""
 
     spec: ArtifactSpec
     windows: pd.DataFrame
     edges: pd.DataFrame
+    layouts: pd.DataFrame = field(default_factory=pd.DataFrame)
     meta: dict = field(default_factory=dict)
 
     @property
@@ -77,6 +79,12 @@ class Artifact:
         """MST edges for one frame."""
         stamp = pd.Timestamp(window_end)
         return self.edges[self.edges["window_end"] == stamp].drop(columns=["window_end"])
+
+    def layout_at(self, window_end) -> pd.DataFrame:
+        """Node positions for one frame, indexed by ticker."""
+        stamp = pd.Timestamp(window_end)
+        frame = self.layouts[self.layouts["window_end"] == stamp]
+        return frame.set_index("ticker")[["x", "y"]]
 
 
 def artifact_dir(spec: ArtifactSpec) -> Path:
@@ -105,6 +113,7 @@ def build_artifact(
     starts = range(0, len(rets) - spec.window + 1, spec.step)
     rows: list[dict] = []
     edge_frames: list[pd.DataFrame] = []
+    trees: dict = {}
     previous_tree = None
 
     for count, i in enumerate(starts, start=1):
@@ -145,6 +154,7 @@ def build_artifact(
         frame = to_frame(tree)
         frame.insert(0, "window_end", window_end)
         edge_frames.append(frame)
+        trees[window_end] = tree
         previous_tree = tree
 
         if progress and count % 100 == 0:
@@ -152,6 +162,11 @@ def build_artifact(
 
     windows = pd.DataFrame(rows).set_index("window_end").sort_index()
     edges = pd.concat(edge_frames, ignore_index=True)
+
+    if progress:
+        print("  chaining layouts...", flush=True)
+    layouts = chained_layouts(trees)
+    windows["layout_drift"] = layout_drift(layouts).reindex(windows.index)
 
     meta = {
         "spec": asdict(spec),
@@ -178,9 +193,10 @@ def build_artifact(
     out.mkdir(parents=True, exist_ok=True)
     windows.to_parquet(out / "windows.parquet")
     edges.to_parquet(out / "edges.parquet")
+    layouts.to_parquet(out / "layouts.parquet")
     (out / "meta.json").write_text(json.dumps(meta, indent=2, default=str))
 
-    return Artifact(spec=spec, windows=windows, edges=edges, meta=meta)
+    return Artifact(spec=spec, windows=windows, edges=edges, layouts=layouts, meta=meta)
 
 
 def load_artifact(spec: ArtifactSpec = ArtifactSpec()) -> Artifact:
@@ -192,8 +208,10 @@ def load_artifact(spec: ArtifactSpec = ArtifactSpec()) -> Artifact:
         )
     windows = pd.read_parquet(out / "windows.parquet")
     edges = pd.read_parquet(out / "edges.parquet")
+    layout_path = out / "layouts.parquet"
+    layouts = pd.read_parquet(layout_path) if layout_path.exists() else pd.DataFrame()
     meta = json.loads((out / "meta.json").read_text())
-    return Artifact(spec=spec, windows=windows, edges=edges, meta=meta)
+    return Artifact(spec=spec, windows=windows, edges=edges, layouts=layouts, meta=meta)
 
 
 def correlation_at(spec: ArtifactSpec, window_end) -> pd.DataFrame:

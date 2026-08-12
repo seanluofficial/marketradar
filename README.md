@@ -17,8 +17,8 @@ Phases 1 and 2 of 5 complete: data layer, structure layer, and precomputed artif
 |---|---|---|
 | 1 | Tiingo adapter, universes, disk cache, aligned return panels | done |
 | 2 | Correlation estimators (sample / Ledoit-Wolf / RMT), MST, absorption ratio, precomputed window artifacts | done |
-| 3 | Streamlit app: time scrubber, network view, systemic-risk chart with crisis annotations | next |
-| 4 | Hierarchical clustering, dendrogram, classical MDS embedding, node drill-down | |
+| 3 | Streamlit app: time scrubber, network view, systemic-risk chart with crisis annotations | done |
+| 4 | Hierarchical clustering, quasi-diagonalisation, MDS embedding, node drill-down | mostly done |
 | 5 | Cross-asset view, survivorship-repair comparison, deploy | |
 
 ### What the built artifact shows (80 names, 2001–2026, 1288 weekly windows)
@@ -46,7 +46,10 @@ radar fetch --universe all      # populate the cache (resumable)
 radar status                    # what landed
 radar panel --start 2005-01-01  # build the return panel, see what was dropped and why
 radar coverage                  # the history-vs-breadth trade-off, quantified
-radar build --start 2000-01-01  # precompute every rolling window (~2 min, 1.4 MB out)
+radar build --start 2000-01-01  # precompute every rolling window (~3 min)
+radar diagnose --universe X     # is there structure here worth exploiting?
+
+streamlit run radar/app/main.py # the app
 ```
 
 `radar fetch` is incremental and resumable. It only ever requests the missing tail of a
@@ -80,6 +83,13 @@ structural change. Layouts warm-start from the previous frame, and edge survival
 worry: between windows five trading days apart — sharing 247 of 252 observations —
 median survival is only **0.873**, and between non-overlapping annual windows it is
 **0.33–0.48**. Roughly 60% of the tree turns over year to year.
+
+Layouts are chained at build time — each frame's force-directed layout starts from the
+previous frame's positions — and the result is verifiable rather than asserted: node
+displacement correlates **−0.73** with edge survival, running from 0.065 when the tree is
+unchanged to 0.202 when survival drops below 0.70. The picture moves when the topology
+moves. Recomputed independently per frame it would scramble every step, and a viewer
+would read optimiser noise as a regime change.
 
 **Classical MDS, not t-SNE/UMAP.** The Mantegna distance d = √(2(1−ρ)) is a proper metric,
 so MDS is the principled embedding for it — and it is deterministic, which means it stays
@@ -137,7 +147,7 @@ rewrite the strategy that generated an existing paper track record.
 pytest -q
 ```
 
-120 tests, no network and no API key required — the adapter is exercised against canned
+165 tests, no network and no API key required — the adapter is exercised against canned
 responses and the panel logic against synthetic series.
 
 ## References
